@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NourishTrack</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:#f7f5f0; --surface:#fff; --surface2:#f0ede6; --border:#e2ddd4;
+  --text:#1a1814; --muted:#7a756c;
+  --accent:#2d5016; --accent-light:#e8f0de;
+  --gold:#c4861a;
+  --danger:#b83232; --danger-light:#fce8e8;
+  --warn:#d4760f;
+  --radius:14px; --radius-sm:8px;
+  --shadow:0 2px 12px rgba(0,0,0,.06); --shadow-lg:0 8px 32px rgba(0,0,0,.1);
+}
+@media (prefers-color-scheme:dark) {
+  :root {
+    --bg:#141210; --surface:#1e1b17; --surface2:#252118; --border:#332e27;
+    --text:#f0ece5; --muted:#8a8278;
+    --accent:#7ab84a; --accent-light:#1c2a12;
+    --gold:#e8a830;
+    --danger:#e05555; --danger-light:#2a1010;
+    --warn:#e89030;
+  }
+}
+body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; font-size:15px; }
+.app { display:flex; flex-direction:column; max-width:900px; margin:0 auto; padding:0 16px; }
+
+header { display:flex; align-items:center; justify-content:space-between; padding:24px 0 20px; border-bottom:1px solid var(--border); margin-bottom:24px; }
+.logo { font-family:'DM Serif Display',serif; font-size:26px; color:var(--accent); letter-spacing:-.5px; }
+.logo span { color:var(--gold); font-style:italic; }
+.date-nav { display:flex; align-items:center; gap:10px; }
+.date-nav button { background:var(--surface); border:1px solid var(--border); border-radius:50%; width:34px; height:34px; cursor:pointer; font-size:16px; color:var(--text); display:flex; align-items:center; justify-content:center; transition:all .15s; }
+.date-nav button:hover { background:var(--surface2); }
+.date-display { font-family:'DM Mono',monospace; font-size:13px; color:var(--muted); }
+.date-today { font-size:15px; font-weight:500; }
+
+.tabs { display:flex; gap:4px; background:var(--surface2); border-radius:var(--radius); padding:4px; margin-bottom:24px; }
+.tab { flex:1; padding:9px 0; text-align:center; border:none; background:transparent; cursor:pointer; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:500; color:var(--muted); border-radius:10px; transition:all .18s; }
+.tab.active { background:var(--surface); color:var(--text); box-shadow:var(--shadow); }
+
+.summary-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-bottom:24px; }
+.stat-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; position:relative; overflow:hidden; }
+.stat-card::after { content:''; position:absolute; bottom:0; left:0; right:0; height:3px; background:var(--track-color,var(--accent)); border-radius:0 0 var(--radius) var(--radius); transform:scaleX(var(--track-pct,0)); transform-origin:left; transition:transform .4s ease; }
+.stat-card .label { font-size:11px; font-weight:500; letter-spacing:.6px; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+.stat-card .value { font-family:'DM Serif Display',serif; font-size:28px; line-height:1; }
+.stat-card .sub { font-size:12px; color:var(--muted); margin-top:4px; }
+
+.section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+.section-title { font-family:'DM Serif Display',serif; font-size:20px; }
+
+.btn { display:inline-flex; align-items:center; gap:7px; padding:10px 18px; border-radius:var(--radius-sm); border:none; cursor:pointer; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:500; transition:all .15s; }
+.btn-primary { background:var(--accent); color:#fff; }
+.btn-primary:hover { opacity:.9; transform:translateY(-1px); }
+.btn-ghost { background:transparent; color:var(--text); border:1px solid var(--border); }
+.btn-ghost:hover { background:var(--surface2); }
+.btn-sm { padding:6px 12px; font-size:13px; }
+
+/* food log */
+.food-list { display:flex; flex-direction:column; gap:8px; }
+.food-item { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px 16px; display:grid; grid-template-columns:1fr repeat(4,64px) 36px; gap:8px; align-items:center; }
+.food-name { font-weight:500; font-size:14px; }
+.food-tag { font-size:11px; color:var(--muted); font-style:italic; }
+.num { font-family:'DM Mono',monospace; font-size:13px; text-align:right; color:var(--muted); }
+.num.hl { color:var(--text); font-weight:500; }
+.food-item-header { background:transparent; border:none; padding:4px 16px; }
+.del-btn { background:transparent; border:none; cursor:pointer; color:var(--muted); font-size:14px; border-radius:6px; width:30px; height:30px; display:flex; align-items:center; justify-content:center; transition:all .15s; }
+.del-btn:hover { background:var(--danger-light); color:var(--danger); }
+
+/* nutrient bars */
+.nut-panel { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); margin-bottom:24px; overflow:hidden; }
+.np-head { display:flex; align-items:center; justify-content:space-between; padding:13px 18px; }
+.np-head.clickable { cursor:pointer; user-select:none; transition:background .15s; }
+.np-head.clickable:hover { background:var(--surface2); }
+.np-head + .np-head { border-top:1px solid var(--border); }
+.np-title { font-size:12px; font-weight:500; letter-spacing:.5px; text-transform:uppercase; color:var(--muted); }
+.np-meta { font-size:12px; color:var(--muted); }
+.tchip { background:var(--surface2); border:1px solid var(--border); border-radius:20px; padding:3px 10px; font-size:12px; color:var(--muted); cursor:pointer; display:flex; align-items:center; gap:5px; transition:all .15s; white-space:nowrap; }
+.tchip:hover { background:var(--border); }
+.chev { transition:transform .25s ease; display:inline-block; font-size:9px; }
+.chev.up { transform:rotate(180deg); }
+.bars-grid { display:grid; grid-template-columns:1fr 1fr; border-top:1px solid var(--border); }
+.bar-row { padding:11px 18px; border-bottom:1px solid var(--border); border-right:1px solid var(--border); }
+.bar-row:nth-child(even) { border-right:none; }
+.bar-row.last-odd { grid-column:1/-1; border-right:none; }
+.bar-row:last-child, .bar-row:nth-last-child(2):nth-child(odd) { border-bottom:none; }
+.bh { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:6px; }
+.bn { font-size:13px; font-weight:500; }
+.bv { font-family:'DM Mono',monospace; font-size:11px; color:var(--muted); }
+.bvc { font-weight:500; }
+.bt { height:6px; background:var(--surface2); border-radius:3px; overflow:hidden; }
+.bf { height:100%; border-radius:3px; transition:width .45s cubic-bezier(.4,0,.2,1); }
+.collap { overflow:hidden; transition:max-height .32s ease, opacity .25s ease; }
+.collap.shut { max-height:0 !important; opacity:0; pointer-events:none; }
+.collap.open { opacity:1; }
+
+/* modal */
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:100; align-items:center; justify-content:center; padding:16px; }
+.modal-overlay.open { display:flex; }
+.modal { background:var(--surface); border-radius:var(--radius); padding:28px; width:100%; max-width:560px; box-shadow:var(--shadow-lg); max-height:90vh; overflow-y:auto; }
+.modal-title { font-family:'DM Serif Display',serif; font-size:22px; margin-bottom:20px; }
+.msub { font-size:11px; font-weight:500; letter-spacing:.5px; text-transform:uppercase; color:var(--muted); grid-column:1/-1; margin-top:12px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+.msub:first-child { margin-top:0; }
+.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.fg { display:flex; flex-direction:column; gap:6px; }
+.fg.full { grid-column:1/-1; }
+label { font-size:12px; font-weight:500; letter-spacing:.4px; text-transform:uppercase; color:var(--muted); }
+input, select { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; font-family:'DM Sans',sans-serif; font-size:14px; color:var(--text); outline:none; width:100%; transition:border-color .15s; }
+input:focus, select:focus { border-color:var(--accent); }
+select option { background:var(--surface); }
+.form-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:20px; }
+.spread-info { background:var(--accent-light); border-radius:var(--radius-sm); padding:10px 14px; font-size:13px; color:var(--accent); margin-top:6px; }
+
+/* search */
+.sbar { display:flex; gap:8px; margin-bottom:14px; }
+.sbar input { flex:1; }
+.sresults { display:flex; flex-direction:column; gap:6px; margin-bottom:14px; max-height:210px; overflow-y:auto; }
+.sr { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 14px; cursor:pointer; transition:all .15s; }
+.sr:hover, .sr.sel { border-color:var(--accent); background:var(--accent-light); }
+.sr-name { font-weight:500; font-size:14px; }
+.sr-meta { font-size:12px; color:var(--muted); margin-top:2px; }
+.sstatus { display:flex; align-items:center; gap:10px; padding:12px 14px; background:var(--surface2); border-radius:var(--radius-sm); font-size:13px; color:var(--muted); margin-bottom:14px; }
+.spin { width:16px; height:16px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .6s linear infinite; flex-shrink:0; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.divider { display:flex; align-items:center; gap:10px; margin:14px 0; color:var(--muted); font-size:12px; }
+.divider::before,.divider::after { content:''; flex:1; height:1px; background:var(--border); }
+.ai-note { background:var(--accent-light); border-radius:var(--radius-sm); padding:10px 14px; font-size:13px; color:var(--accent); margin-top:10px; }
+
+/* food form groups */
+.fgrp-wrap { border:1px solid var(--border); border-radius:var(--radius-sm); margin-top:10px; overflow:hidden; }
+.fgrp-head { display:flex; align-items:center; justify-content:space-between; padding:11px 14px; background:var(--surface2); }
+.fgrp-head.clickable { cursor:pointer; border:none; width:100%; text-align:left; font-family:'DM Sans',sans-serif; transition:background .15s; }
+.fgrp-head.clickable:hover { background:var(--border); }
+.fgrp-title { font-size:12px; font-weight:500; letter-spacing:.4px; text-transform:uppercase; color:var(--muted); }
+.fgrp-right { display:flex; align-items:center; gap:8px; }
+.fgrp-badge { font-size:11px; font-weight:500; background:var(--accent-light); color:var(--accent); border-radius:20px; padding:2px 8px; }
+.fchev { font-size:9px; color:var(--muted); transition:transform .22s ease; display:inline-block; }
+.fchev.up { transform:rotate(180deg); }
+.fgrp-body { padding:0 14px; }
+
+/* week/budget */
+.week-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-bottom:24px; }
+.week-day { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 6px; text-align:center; cursor:pointer; transition:all .15s; }
+.week-day:hover { border-color:var(--accent); }
+.week-day.current { border-color:var(--accent); background:var(--accent-light); }
+.wd-label { font-size:11px; color:var(--muted); font-weight:500; }
+.wd-num { font-size:18px; font-family:'DM Serif Display',serif; margin:2px 0; }
+.wd-dot { width:6px; height:6px; border-radius:50%; margin:0 auto; background:var(--border); }
+.wd-dot.has { background:var(--accent); }
+.wd-dot.over { background:var(--danger); }
+
+.empty { text-align:center; padding:36px 24px; color:var(--muted); }
+.empty-icon { font-size:44px; margin-bottom:10px; }
+.toast { position:fixed; bottom:24px; right:24px; z-index:200; background:var(--text); color:var(--bg); padding:12px 20px; border-radius:var(--radius-sm); font-size:14px; opacity:0; transform:translateY(8px); transition:all .3s; pointer-events:none; }
+.toast.show { opacity:1; transform:translateY(0); }
+
+@media (max-width:620px) {
+  .food-item { grid-template-columns:1fr repeat(2,56px) 36px; }
+  .c-hide { display:none; }
+  .summary-grid { grid-template-columns:repeat(2,1fr); }
+  .form-grid { grid-template-columns:1fr; }
+  .bars-grid { grid-template-columns:1fr; }
+  .bar-row { border-right:none !important; }
+  .bar-row.last-odd { grid-column:auto; }
+  .bar-row:nth-last-child(2):nth-child(odd) { border-bottom:1px solid var(--border); }
+  .bar-row:last-child { border-bottom:none !important; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<header>
+  <div class="logo">Nourish<span>Track</span></div>
+  <div class="date-nav">
+    <button onclick="changeDay(-1)">&#8592;</button>
+    <div style="text-align:center">
+      <div class="date-today" id="dateToday"></div>
+      <div class="date-display" id="dateDisplay"></div>
+    </div>
+    <button onclick="changeDay(1)">&#8594;</button>
+  </div>
+  <div style="display:flex;gap:8px">
+    <button class="btn btn-ghost btn-sm" onclick="openSettings()">&#128273; API Key</button>
+    <button class="btn btn-ghost btn-sm" onclick="openGoals()">&#9881; Goals</button>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('day',this)">Today</button>
+  <button class="tab" onclick="switchTab('week',this)">Week</button>
+  <button class="tab" onclick="switchTab('budget',this)">Budget</button>
+</div>
+
+<div id="tab-day">
+  <div class="summary-grid" id="summaryCards"></div>
+  <div id="nutrientBars"></div>
+  <div class="section-header">
+    <h2 class="section-title">Food Log</h2>
+    <button class="btn btn-primary btn-sm" onclick="openAddFood()">+ Add Food</button>
+  </div>
+  <div class="food-list" id="foodList"></div>
+  <div class="section-header" style="margin-top:28px">
+    <h2 class="section-title">Spending</h2>
+    <button class="btn btn-ghost btn-sm" onclick="openAddCost()">+ Add Cost</button>
+  </div>
+  <div id="costList"></div>
+</div>
+
+<div id="tab-week" style="display:none">
+  <div class="week-grid" id="weekGrid"></div>
+  <div id="weekSummary"></div>
+</div>
+<div id="tab-budget" style="display:none"><div id="budgetContent"></div></div>
+</div>
+
+<!-- ADD FOOD -->
+<div class="modal-overlay" id="foodModal">
+  <div class="modal">
+    <h2 class="modal-title">Add Food Entry</h2>
+    <div class="sbar">
+      <input id="f-search" type="text" placeholder="Search food… e.g. 'salmon 150g', 'banana'" onkeydown="if(event.key==='Enter')doSearch()" />
+      <button class="btn btn-primary btn-sm" onclick="doSearch()">Search</button>
+    </div>
+    <div id="sstatus" style="display:none"></div>
+    <div id="sresults" style="display:none"></div>
+    <div class="divider">or enter manually</div>
+    <div id="foodForm">
+      <div class="form-grid">
+        <div class="fg full"><label>Food Name</label><input id="f-name" type="text" placeholder="e.g. Chicken breast, 200g" /></div>
+        <div class="fg full" id="portionRow" style="display:none">
+          <label>Portion (g / ml) — scales all nutrients proportionally</label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input id="f-portion" type="number" min="1" step="1" style="width:110px" oninput="adjustPortion()" />
+            <span style="font-size:13px;color:var(--muted)" id="portionBase"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Macros: always open -->
+      <div class="fgrp-head" style="margin-top:14px">
+        <span class="fgrp-title">Macronutrients</span>
+      </div>
+      <div class="form-grid fgrp-body">
+        <div class="fg"><label>Calories (kcal)</label><input id="f-cal" type="number" min="0" placeholder="0" /></div>
+        <div class="fg"><label>Protein (g)</label><input id="f-prot" type="number" min="0" step="0.1" placeholder="0" /></div>
+        <div class="fg"><label>Carbs (g)</label><input id="f-carb" type="number" min="0" step="0.1" placeholder="0" /></div>
+        <div class="fg"><label>Fat — total (g)</label><input id="f-fat" type="number" min="0" step="0.1" placeholder="0" /></div>
+        <div class="fg"><label>Fibre (g)</label><input id="f-fibre" type="number" min="0" step="0.1" placeholder="0" /></div>
+        <div class="fg"><label>Sugar (g)</label><input id="f-sugar" type="number" min="0" step="0.1" placeholder="0" /></div>
+        <div class="fg"><label>Sodium (mg)</label><input id="f-sodium" type="number" min="0" placeholder="0" /></div>
+        <div class="fg"><label>Meal</label>
+          <select id="f-meal"><option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snack</option></select>
+        </div>
+      </div>
+
+      <!-- Collapsible extended groups -->
+      <div id="fgrp-fats" class="fgrp-wrap">
+        <button type="button" class="fgrp-head clickable" onclick="toggleFgrp('fats')">
+          <span class="fgrp-title">Fats &amp; Fatty Acids</span>
+          <span class="fgrp-right"><span id="fgrp-fats-badge" class="fgrp-badge" style="display:none"></span><span class="fchev" id="fchev-fats">&#9650;</span></span>
+        </button>
+        <div class="fgrp-body collap shut" id="fbody-fats" style="max-height:0">
+          <div class="form-grid" style="padding:12px 0 4px">
+            <div class="fg"><label>Saturated Fat (g)</label><input id="f-satfat" type="number" min="0" step="0.1" placeholder="0" /></div>
+            <div class="fg"><label>Trans Fat (g)</label><input id="f-transfat" type="number" min="0" step="0.01" placeholder="0" /></div>
+            <div class="fg"><label>Omega-3 (g)</label><input id="f-omega3" type="number" min="0" step="0.01" placeholder="0" /></div>
+            <div class="fg"><label>Omega-6 (g)</label><input id="f-omega6" type="number" min="0" step="0.1" placeholder="0" /></div>
+            <div class="fg"><label>Cholesterol (mg)</label><input id="f-chol" type="number" min="0" placeholder="0" /></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="fgrp-vitamins" class="fgrp-wrap">
+        <button type="button" class="fgrp-head clickable" onclick="toggleFgrp('vitamins')">
+          <span class="fgrp-title">Vitamins</span>
+          <span class="fgrp-right"><span id="fgrp-vitamins-badge" class="fgrp-badge" style="display:none"></span><span class="fchev" id="fchev-vitamins">&#9650;</span></span>
+        </button>
+        <div class="fgrp-body collap shut" id="fbody-vitamins" style="max-height:0">
+          <div class="form-grid" style="padding:12px 0 4px">
+            <div class="fg"><label>Vitamin A (µg)</label><input id="f-vitA" type="number" min="0" placeholder="0" /></div>
+            <div class="fg"><label>Vitamin C (mg)</label><input id="f-vitC" type="number" min="0" step="0.1" placeholder="0" /></div>
+            <div class="fg"><label>Vitamin D (µg)</label><input id="f-vitD" type="number" min="0" step="0.1" placeholder="0" /></div>
+            <div class="fg"><label>Vitamin E (mg)</label><input id="f-vitE" type="number" min="0" step="0.1" placeholder="0" /></div>
+            <div class="fg"><label>Vitamin K (µg)</label><input id="f-vitK" type="number" min="0" placeholder="0" /></div>
+            <div class="fg"><label>B1 Thiamine (mg)</label><input id="f-vitB1" type="number" min="0" step="0.01" placeholder="0" /></div>
+            <div class="fg"><label>B2 Riboflavin (mg)</label><input id="f-vitB2" type="number" min="0" step="0.01" placeholder="0" /></div>
+            <div class="fg"><label>B3 Niacin (mg)</label><input id="f-vitB3" type="number" min="0" step="0.1" placeholder="0" /></div>
+            <div class="fg"><label>B6 (mg)</label><input id="f-vitB6" type="number" min="0" step="0.01" placeholder="0" /></div>
+            <div class="fg"><label>B9 Folate (µg)</label><input id="f-vitB9" type="number" min="0" placeholder="0" /></div>
+            <div class="fg"><label>B12 (µg)</label><input id="f-vitB12" type="number" min="0" step="0.01" placeholder="0" /></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="fgrp-minerals" class="fgrp-wrap">
+        <button type="button" class="fgrp-head clickable" onclick="toggleFgrp('minerals')">
+          <span class="fgrp-title">Minerals</span>
+          <span class="fgrp-right"><span id="fgrp-minerals-badge" class="fgrp-badge" style="display:none"></span><span class="fchev" id="fchev-minerals">&#9650;</span></span>
+        </button>
+        <div class="fgrp-body collap shut" id="fbody-minerals" style="max-height:0">
+          <div class="form-grid" style="padding:12px 0 4px">
+            <div class="fg"><label>Calcium (mg)</label><input id="f-calcium" type="number" min="0" placeholder="0" /></div>
+            <div class="fg"><label>Iron (mg)</label><input id="f-iron" type="number" min="0" step="0.1" placeholder="0" /></div>
+            <div class="fg"><label>Magnesium (mg)</label><input id="f-magnes" type="number" min="0" placeholder="0" /></div>
+            <div class="fg"><label>Phosphorus (mg)</label><input id="f-phosph" type="number" min="0" placeholder="0" /></div>
+            <div class="fg"><label>Potassium (mg)</label><input id="f-potass" type="number" min="0" placeholder="0" /></div>
+            <div class="fg"><label>Zinc (mg)</label><input id="f-zinc" type="number" min="0" step="0.1" placeholder="0" /></div>
+            <div class="fg"><label>Selenium (µg)</label><input id="f-selenium" type="number" min="0" step="0.1" placeholder="0" /></div>
+            <div class="fg"><label>Copper (mg)</label><input id="f-copper" type="number" min="0" step="0.01" placeholder="0" /></div>
+            <div class="fg"><label>Manganese (mg)</label><input id="f-mangan" type="number" min="0" step="0.01" placeholder="0" /></div>
+            <div class="fg"><label>Iodine (µg)</label><input id="f-iodine" type="number" min="0" placeholder="0" /></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="aiNote" style="display:none" class="ai-note">✦ AI populated all available fields — expand groups to review. Adjust any value before saving.</div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('foodModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveFood()">Add Entry</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD COST -->
+<div class="modal-overlay" id="costModal">
+  <div class="modal">
+    <h2 class="modal-title">Add Food Cost</h2>
+    <div class="form-grid">
+      <div class="fg full"><label>Description</label><input id="c-desc" type="text" placeholder="e.g. Weekly groceries" /></div>
+      <div class="fg"><label>Total Cost ($)</label><input id="c-amount" type="number" min="0" step="0.01" placeholder="0.00" oninput="updateSpread()" /></div>
+      <div class="fg"><label>Spread over (days)</label><input id="c-days" type="number" min="1" value="1" step="1" oninput="updateSpread()" /></div>
+    </div>
+    <div class="spread-info" id="spreadInfo">Enter an amount to see the daily cost.</div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('costModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCost()">Add Cost</button>
+    </div>
+  </div>
+</div>
+
+<!-- GOALS -->
+<div class="modal-overlay" id="goalsModal">
+  <div class="modal">
+    <h2 class="modal-title">Daily Goals & Budget</h2>
+    <div id="goalsForm"></div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('goalsModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveGoals()">Save Goals</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal" style="max-width:480px">
+    <h2 class="modal-title">Data Sources</h2>
+
+    <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:20px">
+
+      <!-- USDA -->
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div>
+            <div style="font-weight:500;font-size:14px">USDA FoodData Central</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:2px">Most accurate · whole foods &amp; ingredients</div>
+          </div>
+          <span id="usda-status-badge" style="font-size:11px;font-weight:500;padding:3px 9px;border-radius:20px"></span>
+        </div>
+        <div class="fg" style="margin-bottom:10px">
+          <label>API Key</label>
+          <input id="s-usdakey" type="text" placeholder="Paste your free API key here" style="font-family:'DM Mono',monospace;font-size:13px" />
+        </div>
+        <div style="font-size:12px;color:var(--muted)">
+          Get a free key at <a href="https://fdc.nal.usda.gov/api-guide.html" target="_blank" style="color:var(--accent)">fdc.nal.usda.gov/api-guide</a> — takes ~30 seconds to register.
+        </div>
+      </div>
+
+      <!-- Open Food Facts -->
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div style="font-weight:500;font-size:14px">Open Food Facts</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:2px">Free · great for packaged &amp; branded foods</div>
+          </div>
+          <span style="font-size:11px;font-weight:500;padding:3px 9px;border-radius:20px;background:var(--accent-light);color:var(--accent)">Always on</span>
+        </div>
+      </div>
+
+      <!-- AI fallback -->
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div style="font-weight:500;font-size:14px">AI Fallback (Claude)</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:2px">Used only when databases return no match</div>
+          </div>
+          <span style="font-size:11px;font-weight:500;padding:3px 9px;border-radius:20px;background:var(--surface);border:1px solid var(--border);color:var(--muted)">Fallback</span>
+        </div>
+      </div>
+
+    </div>
+
+    <div style="background:var(--accent-light);border-radius:var(--radius-sm);padding:12px 14px;font-size:13px;color:var(--accent);margin-bottom:20px">
+      <strong>Search priority:</strong> USDA (if key set) → Open Food Facts → AI estimate. Results are labelled by source so you always know where data came from.
+    </div>
+
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('settingsModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSettings()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── NUTRIENT SCHEMA ──────────────────────────────────────
+const NUTRIENTS = [
+  // Macros
+  {key:'cal',    label:'Calories',       unit:'kcal', dec:0, group:'macro',    goal:2000, color:'#2d6e20'},
+  {key:'prot',   label:'Protein',        unit:'g',    dec:1, group:'macro',    goal:150,  color:'#8b4513'},
+  {key:'carb',   label:'Carbs',          unit:'g',    dec:1, group:'macro',    goal:250,  color:'#b8780a'},
+  {key:'fat',    label:'Fat (total)',    unit:'g',    dec:1, group:'macro',    goal:65,   color:'#5a6e2d'},
+  {key:'fibre',  label:'Fibre',          unit:'g',    dec:1, group:'macro',    goal:30,   color:'#1d7a5a'},
+  {key:'sugar',  label:'Sugar',          unit:'g',    dec:1, group:'macro',    goal:50,   color:'#a05c00'},
+  {key:'sodium', label:'Sodium',         unit:'mg',   dec:0, group:'macro',    goal:2300, color:'#5a3e7a'},
+  // Fats
+  {key:'satfat', label:'Saturated Fat',  unit:'g',    dec:1, group:'fats',     goal:20,   color:'#c0392b'},
+  {key:'transfat',label:'Trans Fat',     unit:'g',    dec:2, group:'fats',     goal:2,    color:'#e74c3c'},
+  {key:'omega3', label:'Omega-3',        unit:'g',    dec:2, group:'fats',     goal:1.6,  color:'#2980b9'},
+  {key:'omega6', label:'Omega-6',        unit:'g',    dec:1, group:'fats',     goal:17,   color:'#8e44ad'},
+  {key:'chol',   label:'Cholesterol',    unit:'mg',   dec:0, group:'fats',     goal:300,  color:'#d35400'},
+  // Vitamins
+  {key:'vitA',   label:'Vitamin A',      unit:'µg',   dec:0, group:'vitamins', goal:900,  color:'#e67e22'},
+  {key:'vitC',   label:'Vitamin C',      unit:'mg',   dec:1, group:'vitamins', goal:90,   color:'#f39c12'},
+  {key:'vitD',   label:'Vitamin D',      unit:'µg',   dec:1, group:'vitamins', goal:20,   color:'#d4ac0d'},
+  {key:'vitE',   label:'Vitamin E',      unit:'mg',   dec:1, group:'vitamins', goal:15,   color:'#27ae60'},
+  {key:'vitK',   label:'Vitamin K',      unit:'µg',   dec:0, group:'vitamins', goal:120,  color:'#16a085'},
+  {key:'vitB1',  label:'B1 Thiamine',    unit:'mg',   dec:2, group:'vitamins', goal:1.2,  color:'#2ecc71'},
+  {key:'vitB2',  label:'B2 Riboflavin',  unit:'mg',   dec:2, group:'vitamins', goal:1.3,  color:'#1abc9c'},
+  {key:'vitB3',  label:'B3 Niacin',      unit:'mg',   dec:1, group:'vitamins', goal:16,   color:'#3498db'},
+  {key:'vitB6',  label:'B6',             unit:'mg',   dec:2, group:'vitamins', goal:1.7,  color:'#9b59b6'},
+  {key:'vitB9',  label:'B9 Folate',      unit:'µg',   dec:0, group:'vitamins', goal:400,  color:'#c0392b'},
+  {key:'vitB12', label:'B12',            unit:'µg',   dec:2, group:'vitamins', goal:2.4,  color:'#e74c3c'},
+  // Minerals
+  {key:'calcium',label:'Calcium',        unit:'mg',   dec:0, group:'minerals', goal:1000, color:'#7f8c8d'},
+  {key:'iron',   label:'Iron',           unit:'mg',   dec:1, group:'minerals', goal:18,   color:'#c0392b'},
+  {key:'magnes', label:'Magnesium',      unit:'mg',   dec:0, group:'minerals', goal:420,  color:'#27ae60'},
+  {key:'phosph', label:'Phosphorus',     unit:'mg',   dec:0, group:'minerals', goal:700,  color:'#8e44ad'},
+  {key:'potass', label:'Potassium',      unit:'mg',   dec:0, group:'minerals', goal:3400, color:'#e67e22'},
+  {key:'zinc',   label:'Zinc',           unit:'mg',   dec:1, group:'minerals', goal:11,   color:'#2980b9'},
+  {key:'selenium',label:'Selenium',      unit:'µg',   dec:1, group:'minerals', goal:55,   color:'#f39c12'},
+  {key:'copper', label:'Copper',         unit:'mg',   dec:2, group:'minerals', goal:0.9,  color:'#d35400'},
+  {key:'mangan', label:'Manganese',      unit:'mg',   dec:2, group:'minerals', goal:2.3,  color:'#95a5a6'},
+  {key:'iodine', label:'Iodine',         unit:'µg',   dec:0, group:'minerals', goal:150,  color:'#16a085'},
+];
+
+const GROUPS = {
+  macro:    {label:'Macronutrients',     always:true},
+  fats:     {label:'Fats & Fatty Acids', always:false},
+  vitamins: {label:'Vitamins',           always:false},
+  minerals: {label:'Minerals',           always:false},
+};
+const NUT_MAP = Object.fromEntries(NUTRIENTS.map(n=>[n.key,n]));
+const NUT_KEYS = NUTRIENTS.map(n=>n.key);
+
+// ── STATE ────────────────────────────────────────────────
+const STORAGE_KEY = 'nourishtrack_v2';
+let state = {
+  goals: Object.fromEntries([...NUTRIENTS.map(n=>[n.key,n.goal]),['budget',25]]),
+  days: {},
+  open: {fats:true, vitamins:true, minerals:true},
+  usdaKey: '',
+};
+let currentDate = new Date(); currentDate.setHours(0,0,0,0);
+
+function dateKey(d){ return d.toISOString().slice(0,10); }
+function getDay(d){
+  const k=dateKey(d);
+  if(!state.days[k]) state.days[k]={foods:[],costs:[]};
+  return state.days[k];
+}
+function load(){
+  try{
+    const s=localStorage.getItem(STORAGE_KEY);
+    if(s){
+      const p=JSON.parse(s);
+      state.goals={...state.goals,...(p.goals||{})};
+      state.days=p.days||{};
+      state.open={...state.open,...(p.open||{})};
+      state.usdaKey=p.usdaKey||'';
+    }
+  }catch(e){}
+}
+function save(){ try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch(e){} }
+
+// ── DATE ─────────────────────────────────────────────────
+const DN=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function isToday(d){ const t=new Date();t.setHours(0,0,0,0);return d.getTime()===t.getTime(); }
+function changeDay(delta){ currentDate=new Date(currentDate.getTime()+delta*86400000); render(); }
+function renderHeader(){
+  document.getElementById('dateToday').textContent=isToday(currentDate)?'Today':DN[currentDate.getDay()];
+  document.getElementById('dateDisplay').textContent=`${currentDate.getDate()} ${MN[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+}
+
+// ── TOTALS ───────────────────────────────────────────────
+function dayTotals(d){
+  const t=Object.fromEntries(NUT_KEYS.map(k=>[k,0]));
+  for(const f of getDay(d).foods) NUT_KEYS.forEach(k=>{ t[k]+=(f[k]||0); });
+  return t;
+}
+function daySpend(d){ return getDay(d).costs.reduce((s,c)=>s+(c.daily||0),0); }
+function pct(v,g){ return g>0?Math.min(v/g,1):0; }
+function fmt(n,d=0){ return Number(n).toFixed(d); }
+
+// ── RENDER ───────────────────────────────────────────────
+function render(){
+  renderHeader();
+  const t=document.querySelector('.tab.active');
+  const tab=t?t.textContent.trim():'Today';
+  if(tab==='Today') renderDay();
+  else if(tab==='Week') renderWeek();
+  else renderBudget();
+}
+
+function bcolor(n,over,warn){
+  if(over) return 'var(--danger)';
+  if(warn) return 'var(--warn)';
+  return n.color;
+}
+
+function renderDay(){
+  const totals=dayTotals(currentDate);
+  const spend=daySpend(currentDate);
+  const g=state.goals;
+
+  // cards
+  const cdefs=[
+    {key:'cal', label:'Calories', sfx:' kcal', c:'#2d6e20'},
+    {key:'prot',label:'Protein',  sfx:'g',     c:'#8b4513'},
+    {key:'carb',label:'Carbs',    sfx:'g',     c:'#b8780a'},
+    {key:'fat', label:'Fat',      sfx:'g',     c:'#5a6e2d'},
+  ];
+  let ch=cdefs.map(cd=>{
+    const v=totals[cd.key],gl=g[cd.key];
+    const p=pct(v,gl),ov=v>gl&&gl>0,wn=p>.85&&!ov;
+    const clr=ov?'var(--danger)':wn?'var(--warn)':cd.c;
+    const dv=cd.key==='cal'?fmt(v,0):fmt(v,1);
+    return `<div class="stat-card" style="--track-color:${clr};--track-pct:${p}">
+      <div class="label">${cd.label}</div><div class="value">${dv}</div>
+      <div class="sub">/ ${gl}${cd.sfx}${ov?' ⚠':''}</div></div>`;
+  }).join('');
+  const bp=pct(spend,g.budget),bo=spend>g.budget&&g.budget>0,bw=bp>.8&&!bo;
+  ch+=`<div class="stat-card" style="--track-color:${bo?'var(--danger)':bw?'var(--warn)':'var(--gold)'};--track-pct:${bp}">
+    <div class="label">Spent Today</div><div class="value">$${fmt(spend,2)}</div>
+    <div class="sub">/ $${fmt(g.budget,2)}${bo?' ⚠':''}</div></div>`;
+  document.getElementById('summaryCards').innerHTML=ch;
+
+  renderNutBars(totals,g);
+
+  // food list
+  const day=getDay(currentDate);
+  const fl=document.getElementById('foodList');
+  if(!day.foods.length){
+    fl.innerHTML=`<div class="empty"><div class="empty-icon">🥗</div><p>No food logged yet.</p></div>`;
+  } else {
+    fl.innerHTML=`<div class="food-item food-item-header">
+      <span style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)">Item</span>
+      <span class="num" style="font-size:10px;letter-spacing:.5px;text-transform:uppercase">Cal</span>
+      <span class="num c-hide" style="font-size:10px;letter-spacing:.5px;text-transform:uppercase">Prot</span>
+      <span class="num c-hide" style="font-size:10px;letter-spacing:.5px;text-transform:uppercase">Carbs</span>
+      <span class="num" style="font-size:10px;letter-spacing:.5px;text-transform:uppercase">Fat</span>
+      <span></span></div>`+
+    day.foods.map((f,i)=>`<div class="food-item">
+      <div><div class="food-name">${esc(f.name)}</div><div class="food-tag">${esc(f.meal)}</div></div>
+      <span class="num hl">${fmt(f.cal||0)}</span>
+      <span class="num c-hide">${fmt(f.prot||0,1)}g</span>
+      <span class="num c-hide">${fmt(f.carb||0,1)}g</span>
+      <span class="num">${fmt(f.fat||0,1)}g</span>
+      <button class="del-btn" onclick="deleteFood(${i})">&#10005;</button>
+    </div>`).join('');
+  }
+
+  // cost list
+  const cl=document.getElementById('costList');
+  if(!day.costs.length){
+    cl.innerHTML=`<div class="empty" style="padding:20px"><p>No spending logged today.</p></div>`;
+  } else {
+    cl.innerHTML=`<div style="display:flex;flex-direction:column;gap:8px">`+
+    day.costs.map((c,i)=>`<div class="food-item" style="grid-template-columns:1fr auto auto 36px">
+      <div><div class="food-name">${esc(c.desc)}</div><div class="food-tag">${c.days>1?`$${fmt(c.amount,2)} over ${c.days} days`:'Single purchase'}</div></div>
+      <span class="num hl">$${fmt(c.daily,2)}/day</span>
+      <span class="num" style="margin-left:8px">$${fmt(c.amount,2)}</span>
+      <button class="del-btn" onclick="deleteCost(${i})">&#10005;</button>
+    </div>`).join('')+`</div>`;
+  }
+}
+
+function renderNutBars(totals, g){
+  const order=['macro','fats','vitamins','minerals'];
+  let html='<div class="nut-panel">';
+  order.forEach(grpKey=>{
+    const grp=GROUPS[grpKey];
+    const nuts=NUTRIENTS.filter(n=>n.group===grpKey);
+    const isOpen=grp.always||state.open[grpKey];
+    const overCount=nuts.filter(n=>(totals[n.key]||0)>g[n.key]&&g[n.key]>0).length;
+    const tracked=nuts.filter(n=>(totals[n.key]||0)>0).length;
+
+    if(!grp.always){
+      const metaTxt=`${tracked} tracked${overCount?` &nbsp;·&nbsp; <span style="color:var(--danger)">${overCount} over limit</span>`:''}`;
+      html+=`<div class="np-head clickable" onclick="toggleGrp('${grpKey}')">
+        <span class="np-title">${grp.label}</span>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="np-meta">${metaTxt}</span>
+          <button class="tchip" onclick="event.stopPropagation();toggleGrp('${grpKey}')">
+            <span class="chev ${isOpen?'up':''}">&#9650;</span>${isOpen?'Hide':'Show'}
+          </button>
+        </div>
+      </div>`;
+      html+=`<div class="collap ${isOpen?'open':'shut'}" id="grp-${grpKey}" style="max-height:${isOpen?'2000px':'0'}">`;
+    } else {
+      html+=`<div class="np-head"><span class="np-title">${grp.label}</span></div>`;
+    }
+
+    html+=`<div class="bars-grid">`;
+    nuts.forEach((n,ni)=>{
+      const v=totals[n.key]||0, gl=g[n.key]||0;
+      const p=pct(v,gl), ov=v>gl&&gl>0, wn=p>.85&&!ov;
+      const clr=bcolor(n,ov,wn);
+      const dv=n.dec>0?v.toFixed(n.dec):Math.round(v);
+      const isLastOdd=nuts.length%2===1&&ni===nuts.length-1;
+      const statusClr=ov?'color:var(--danger)':wn?'color:var(--warn)':'';
+      html+=`<div class="bar-row${isLastOdd?' last-odd':''}">
+        <div class="bh">
+          <span class="bn">${n.label}</span>
+          <span class="bv" style="${statusClr}"><span class="bvc">${dv}</span>&thinsp;/&thinsp;${gl}${n.unit}${ov?' ↑':''}</span>
+        </div>
+        <div class="bt"><div class="bf" style="width:${(p*100).toFixed(1)}%;background:${clr}"></div></div>
+      </div>`;
+    });
+    html+=`</div>`; // bars-grid
+    if(!grp.always) html+=`</div>`; // collap
+  });
+  html+=`</div>`; // nut-panel
+  document.getElementById('nutrientBars').innerHTML=html;
+}
+
+function toggleGrp(k){
+  state.open[k]=!state.open[k]; save();
+  const isOpen=state.open[k];
+  const el=document.getElementById('grp-'+k);
+  if(!el) return;
+  el.style.maxHeight=isOpen?'2000px':'0';
+  el.classList.toggle('open',isOpen); el.classList.toggle('shut',!isOpen);
+  const hd=el.previousElementSibling;
+  if(hd){
+    const chip=hd.querySelector('.tchip');
+    if(chip) chip.innerHTML=`<span class="chev ${isOpen?'up':''}">&#9650;</span>${isOpen?'Hide':'Show'}`;
+  }
+}
+
+// ── WEEK ─────────────────────────────────────────────────
+function renderWeek(){
+  const today=new Date();today.setHours(0,0,0,0);
+  const sow=new Date(today);sow.setDate(today.getDate()-today.getDay());
+  const days=Array.from({length:7},(_,i)=>new Date(sow.getTime()+i*86400000));
+  document.getElementById('weekGrid').innerHTML=days.map(d=>{
+    const sp=daySpend(d),has=getDay(d).foods.length>0||getDay(d).costs.length>0;
+    const ov=sp>state.goals.budget&&state.goals.budget>0;
+    const cur=d.getTime()===currentDate.getTime();
+    return `<div class="week-day ${cur?'current':''}" onclick="jumpToDay('${dateKey(d)}')">
+      <div class="wd-label">${DN[d.getDay()]}</div>
+      <div class="wd-num">${d.getDate()}</div>
+      <div class="wd-dot ${has?(ov?'over':'has'):''}"></div></div>`;
+  }).join('');
+  let wc=0,wp=0,ws=0,dl=0;
+  days.forEach(d=>{const t=dayTotals(d);wc+=t.cal;wp+=t.prot;ws+=daySpend(d);if(getDay(d).foods.length>0)dl++;});
+  document.getElementById('weekSummary').innerHTML=`<div class="summary-grid" style="margin-top:0">
+    <div class="stat-card"><div class="label">Week Calories</div><div class="value">${fmt(wc)}</div><div class="sub">${dl} days logged</div></div>
+    <div class="stat-card"><div class="label">Avg Cal/Day</div><div class="value">${dl?fmt(wc/dl):'—'}</div><div class="sub">goal: ${state.goals.cal}</div></div>
+    <div class="stat-card"><div class="label">Week Protein</div><div class="value">${fmt(wp,0)}g</div><div class="sub">avg ${dl?fmt(wp/dl,0):'—'}g/day</div></div>
+    <div class="stat-card"><div class="label">Week Spend</div><div class="value">$${fmt(ws,2)}</div><div class="sub">goal $${fmt(state.goals.budget*7,2)}</div></div>
+  </div>`;
+}
+
+// ── BUDGET ───────────────────────────────────────────────
+function renderBudget(){
+  const g=state.goals;
+  const days=Array.from({length:14},(_,i)=>{const d=new Date(currentDate.getTime()-(13-i)*86400000);return{d,sp:daySpend(d)};});
+  const tot=days.reduce((s,d)=>s+d.sp,0);
+  const dl=days.filter(d=>getDay(d.d).costs.length>0).length;
+  const bars=days.map(({d,sp})=>{
+    const ov=sp>g.budget&&g.budget>0,isC=d.getTime()===currentDate.getTime();
+    const bh=g.budget>0?Math.min(sp/(g.budget*1.5),1)*100:0;
+    const gh=g.budget>0?(g.budget/(g.budget*1.5))*100:0;
+    return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1">
+      <div style="height:100px;display:flex;align-items:flex-end;width:100%;justify-content:center;position:relative">
+        ${g.budget>0?`<div style="position:absolute;bottom:${gh}%;left:0;right:0;border-top:1px dashed var(--border)"></div>`:''}
+        <div style="width:70%;border-radius:4px 4px 0 0;height:${bh}%;background:${ov?'var(--danger)':isC?'var(--accent)':'var(--accent-light)'};border:1px solid ${ov?'var(--danger)':isC?'var(--accent)':'var(--border)'};min-height:${sp>0?4:0}px"></div>
+      </div>
+      <div style="font-size:11px;color:var(--muted)">${d.getDate()}/${d.getMonth()+1}</div>
+      <div style="font-family:'DM Mono',monospace;font-size:11px;color:${ov?'var(--danger)':'var(--text)'}">${sp>0?'$'+fmt(sp,0):''}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('budgetContent').innerHTML=`
+    <div class="summary-grid" style="margin-bottom:24px">
+      <div class="stat-card"><div class="label">Daily Budget</div><div class="value">$${fmt(g.budget,2)}</div><div class="sub">set in Goals</div></div>
+      <div class="stat-card"><div class="label">Today's Spend</div><div class="value">$${fmt(daySpend(currentDate),2)}</div><div class="sub">${daySpend(currentDate)>g.budget&&g.budget>0?'⚠ Over budget':'On track'}</div></div>
+      <div class="stat-card"><div class="label">14-Day Total</div><div class="value">$${fmt(tot,2)}</div><div class="sub">${dl} days with costs</div></div>
+      <div class="stat-card"><div class="label">14-Day Avg</div><div class="value">$${fmt(dl?tot/14:0,2)}</div><div class="sub">per day</div></div>
+    </div>
+    <div class="section-header"><h2 class="section-title">Last 14 Days</h2></div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 12px">
+      <div style="display:flex;gap:4px;align-items:flex-end">${bars}</div>
+      ${g.budget>0?`<div style="font-size:12px;color:var(--muted);margin-top:8px;text-align:right">— daily budget $${fmt(g.budget,2)}</div>`:''}
+    </div>`;
+}
+
+// ── SEARCH ENGINE (3-tier) ───────────────────────────────
+// Tier 1: USDA FoodData Central  (most accurate, requires free API key)
+// Tier 2: Open Food Facts         (great for packaged/branded, no key needed)
+// Tier 3: Claude AI fallback      (used only when both databases miss)
+
+let searchBase = null;
+
+function getUsdaKey(){ return (state.usdaKey||'').trim(); }
+
+// ── USDA FoodData Central ────────────────────────────────
+async function searchUSDA(query){
+  const key = getUsdaKey();
+  if(!key) return [];
+  // Search endpoint
+  const url = `https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(query)}&pageSize=6&dataType=Foundation,SR%20Legacy,Survey%20(FNDDS)&api_key=${key}`;
+  const res = await fetch(url);
+  if(!res.ok) throw new Error(`USDA error ${res.status}`);
+  const data = await res.json();
+  if(!data.foods||!data.foods.length) return [];
+
+  // Map USDA nutrient IDs → our keys
+  // https://api.nal.usda.gov/fdc/v1/food/{fdcId} for full nutrients
+  const USDA_ID = {
+    1008:'cal', 1003:'prot', 1005:'carb', 1004:'fat',
+    1079:'fibre', 2000:'sugar', 1093:'sodium',
+    1258:'satfat', 1257:'transfat', 1404:'omega3', 1316:'omega6', 1253:'chol',
+    1106:'vitA', 1162:'vitC', 1114:'vitD', 1109:'vitE', 1185:'vitK',
+    1165:'vitB1', 1166:'vitB2', 1167:'vitB3', 1175:'vitB6', 1177:'vitB9', 1178:'vitB12',
+    1087:'calcium', 1089:'iron', 1090:'magnes', 1091:'phosph',
+    1092:'potass', 1095:'zinc', 1103:'selenium', 1098:'copper', 1101:'mangan', 1100:'iodine',
+  };
+
+  return data.foods.slice(0,4).map(food => {
+    const per100g = Object.fromEntries(NUT_KEYS.map(k=>[k,0]));
+    if(food.foodNutrients){
+      for(const fn of food.foodNutrients){
+        const key = USDA_ID[fn.nutrientId];
+        if(key) per100g[key] = fn.value || 0;
+      }
+    }
+    // Estimate portion: use servingSize if available, else 100g
+    const portion_g = food.servingSize && food.servingSizeUnit &&
+      food.servingSizeUnit.toLowerCase().includes('g') ? food.servingSize : 100;
+    return {
+      name: food.description + (portion_g !== 100 ? ` (${portion_g}g)` : ' (100g)'),
+      portion_g,
+      per100g,
+      source: 'USDA',
+    };
+  });
+}
+
+// ── Open Food Facts ──────────────────────────────────────
+async function searchOFF(query){
+  const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=5&fields=product_name,brands,nutriments,serving_size,serving_quantity`;
+  const res = await fetch(url);
+  if(!res.ok) throw new Error(`OFF error ${res.status}`);
+  const data = await res.json();
+  if(!data.products||!data.products.length) return [];
+
+  const OFF_MAP = {
+    'energy-kcal_100g':'cal', 'proteins_100g':'prot', 'carbohydrates_100g':'carb',
+    'fat_100g':'fat', 'fiber_100g':'fibre', 'sugars_100g':'sugar', 'sodium_100g':'sodium',
+    'saturated-fat_100g':'satfat', 'trans-fat_100g':'transfat',
+    'omega-3-fat_100g':'omega3', 'omega-6-fat_100g':'omega6',
+    'cholesterol_100g':'chol',
+    'vitamin-a_100g':'vitA', 'vitamin-c_100g':'vitC', 'vitamin-d_100g':'vitD',
+    'vitamin-e_100g':'vitE', 'vitamin-k_100g':'vitK',
+    'vitamin-b1_100g':'vitB1', 'vitamin-b2_100g':'vitB2', 'vitamin-pp_100g':'vitB3',
+    'vitamin-b6_100g':'vitB6', 'folates_100g':'vitB9', 'vitamin-b12_100g':'vitB12',
+    'calcium_100g':'calcium', 'iron_100g':'iron', 'magnesium_100g':'magnes',
+    'phosphorus_100g':'phosph', 'potassium_100g':'potass', 'zinc_100g':'zinc',
+    'selenium_100g':'selenium', 'copper_100g':'copper', 'manganese_100g':'mangan',
+    'iodine_100g':'iodine',
+  };
+
+  const results = [];
+  for(const p of data.products){
+    if(!p.product_name) continue;
+    const nm = p.product_name + (p.brands ? ` — ${p.brands}` : '');
+    const per100g = Object.fromEntries(NUT_KEYS.map(k=>[k,0]));
+    const n = p.nutriments || {};
+    for(const [offKey, ourKey] of Object.entries(OFF_MAP)){
+      if(n[offKey] != null) per100g[ourKey] = n[offKey];
+    }
+    // Vitamins in OFF are often in mg/µg per 100g but sometimes as fractions — keep as-is
+    const portion_g = p.serving_quantity || 100;
+    results.push({ name:`${nm} (${portion_g}g serving)`, portion_g, per100g, source:'Open Food Facts' });
+    if(results.length >= 3) break;
+  }
+  return results;
+}
+
+// ── AI Fallback ──────────────────────────────────────────
+async function searchAI(query){
+  const allKeys = NUT_KEYS.join(', ');
+  const res = await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      model:'claude-sonnet-4-20250514', max_tokens:2000,
+      system:`You are a nutrition database. Return ONLY a valid JSON array (no markdown) of 1–3 food options.
+Each item: { "name": string with portion in parens, "portion_g": number, "per100g": { ${allKeys} } }
+All per100g values are per 100g. Use USDA data where known. Never omit a key — use 0 if unknown.`,
+      messages:[{role:'user',content:query}]
+    })
+  });
+  const data = await res.json();
+  const text = (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
+  const items = JSON.parse(text.replace(/```json|```/g,'').trim());
+  return items.map(i=>({...i, source:'AI estimate'}));
+}
+
+// ── Main search orchestrator ─────────────────────────────
+async function doSearch(){
+  const q = document.getElementById('f-search').value.trim();
+  if(!q) return;
+  const st = document.getElementById('sstatus'), rs = document.getElementById('sresults');
+  rs.style.display = 'none';
+  st.style.display = 'flex';
+
+  const hasUsda = !!getUsdaKey();
+
+  try{
+    // Run USDA and OFF in parallel
+    st.innerHTML = `<div class="spin"></div><span>Searching nutrition databases${hasUsda?'':' (add USDA key for best results)'}…</span>`;
+
+    const [usdaResults, offResults] = await Promise.allSettled([
+      hasUsda ? searchUSDA(q) : Promise.resolve([]),
+      searchOFF(q),
+    ]);
+
+    const usda = usdaResults.status==='fulfilled' ? usdaResults.value : [];
+    const off  = offResults.status==='fulfilled'  ? offResults.value  : [];
+
+    let items = [...usda, ...off];
+
+    // Fallback to AI if both databases returned nothing
+    if(items.length === 0){
+      st.innerHTML = `<div class="spin"></div><span>No database matches — trying AI…</span>`;
+      items = await searchAI(q);
+    }
+
+    if(!items.length) throw new Error('No results found');
+
+    st.style.display = 'none';
+    rs.style.display = 'flex'; rs.className = 'sresults';
+    rs.innerHTML = items.map((item,i) => {
+      const p=item.per100g, f=item.portion_g/100;
+      const srcColor = item.source==='USDA'?'var(--accent)':item.source==='Open Food Facts'?'#d4760f':'#8e44ad';
+      const srcBg    = item.source==='USDA'?'var(--accent-light)':item.source==='Open Food Facts'?'var(--warn-light)':'#f3e8ff';
+      return `<div class="sr" onclick="pickResult(${i})">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:3px">
+          <span class="sr-name">${esc(item.name)}</span>
+          <span style="font-size:11px;font-weight:500;white-space:nowrap;padding:2px 7px;border-radius:4px;background:${srcBg};color:${srcColor}">${esc(item.source)}</span>
+        </div>
+        <div class="sr-meta">${Math.round((p.cal||0)*f)} kcal &nbsp;·&nbsp; Protein ${((p.prot||0)*f).toFixed(1)}g &nbsp;·&nbsp; Carbs ${((p.carb||0)*f).toFixed(1)}g &nbsp;·&nbsp; Fat ${((p.fat||0)*f).toFixed(1)}g — per ${item.portion_g}g</div>
+      </div>`;
+    }).join('');
+    rs._items = items;
+
+  }catch(err){
+    st.innerHTML = `<span style="color:var(--danger)">⚠ ${esc(err.message||'Search failed')}. Fill in manually below.</span>`;
+  }
+}
+
+function pickResult(idx){
+  const rs=document.getElementById('sresults');
+  const items=rs._items; if(!items||!items[idx]) return;
+  rs.querySelectorAll('.sr').forEach((el,i)=>el.classList.toggle('sel',i===idx));
+
+  const item=items[idx], factor=item.portion_g/100, p=item.per100g;
+  searchBase={...p};
+
+  document.getElementById('f-name').value=item.name;
+
+  // Populate ALL nutrient inputs that exist in the DOM
+  NUTRIENTS.forEach(n=>{
+    const el=document.getElementById('f-'+n.key);
+    if(el){
+      const v=(p[n.key]||0)*factor;
+      el.value=n.dec>0?v.toFixed(n.dec):Math.round(v);
+    }
+  });
+
+  // For each collapsible group, check if any values are non-zero
+  // Open the group if it has data, and show a count badge
+  ['fats','vitamins','minerals'].forEach(grp=>{
+    const nuts=NUTRIENTS.filter(n=>n.group===grp);
+    const filledCount=nuts.filter(n=>(p[n.key]||0)*factor>0.0001).length;
+    const body=document.getElementById('fbody-'+grp);
+    const chev=document.getElementById('fchev-'+grp);
+    const badge=document.getElementById('fgrp-'+grp+'-badge');
+    if(filledCount>0){
+      // auto-open group
+      if(body){ body.style.maxHeight='1200px'; body.classList.remove('shut'); body.classList.add('open'); }
+      if(chev) chev.classList.add('up');
+      if(badge){ badge.textContent=`${filledCount} filled`; badge.style.display=''; }
+    } else {
+      if(body){ body.style.maxHeight='0'; body.classList.add('shut'); body.classList.remove('open'); }
+      if(chev) chev.classList.remove('up');
+      if(badge){ badge.style.display='none'; badge.textContent=''; }
+    }
+  });
+
+  document.getElementById('f-portion').value=item.portion_g;
+  document.getElementById('portionBase').textContent=`(base: ${item.portion_g}g serving)`;
+  document.getElementById('portionRow').style.display='';
+  document.getElementById('aiNote').style.display='';
+}
+
+function toggleFgrp(grp){
+  const body=document.getElementById('fbody-'+grp);
+  const chev=document.getElementById('fchev-'+grp);
+  if(!body) return;
+  const isOpen=body.classList.contains('open');
+  if(isOpen){
+    body.style.maxHeight='0'; body.classList.add('shut'); body.classList.remove('open');
+    if(chev) chev.classList.remove('up');
+  } else {
+    body.style.maxHeight='1200px'; body.classList.remove('shut'); body.classList.add('open');
+    if(chev) chev.classList.add('up');
+  }
+}
+
+function adjustPortion(){
+  if(!searchBase) return;
+  const gv=parseFloat(document.getElementById('f-portion').value)||0;
+  if(gv<=0) return;
+  const factor=gv/100;
+  NUTRIENTS.forEach(n=>{
+    const el=document.getElementById('f-'+n.key);
+    if(el){ const v=(searchBase[n.key]||0)*factor; el.value=n.dec>0?v.toFixed(n.dec):Math.round(v); }
+  });
+  document.getElementById('portionBase').textContent=`(${gv}g portion)`;
+}
+
+// ── SETTINGS ─────────────────────────────────────────────
+function openSettings(){
+  document.getElementById('s-usdakey').value = state.usdaKey || '';
+  const badge = document.getElementById('usda-status-badge');
+  if(state.usdaKey){
+    badge.textContent='Key saved'; badge.style.background='var(--accent-light)'; badge.style.color='var(--accent)';
+  } else {
+    badge.textContent='No key'; badge.style.background='var(--surface)'; badge.style.border='1px solid var(--border)'; badge.style.color='var(--muted)';
+  }
+  document.getElementById('settingsModal').classList.add('open');
+}
+function saveSettings(){
+  state.usdaKey = document.getElementById('s-usdakey').value.trim();
+  save(); closeModal('settingsModal');
+  toast(state.usdaKey ? 'USDA API key saved ✓' : 'USDA key cleared');
+}
+
+// ── FOOD MODAL ───────────────────────────────────────────
+function openAddFood(){
+  resetFood();
+  document.getElementById('foodModal').classList.add('open');
+  setTimeout(()=>document.getElementById('f-search').focus(),100);
+}
+
+function resetFood(){
+  document.getElementById('f-search').value='';
+  NUTRIENTS.forEach(n=>{ const el=document.getElementById('f-'+n.key); if(el) el.value=''; });
+  document.getElementById('f-name').value='';
+  document.getElementById('sstatus').style.display='none';
+  document.getElementById('sresults').style.display='none';
+  document.getElementById('portionRow').style.display='none';
+  document.getElementById('aiNote').style.display='none';
+  ['fats','vitamins','minerals'].forEach(g=>{
+    const body=document.getElementById('fbody-'+g);
+    const chev=document.getElementById('fchev-'+g);
+    const badge=document.getElementById('fgrp-'+g+'-badge');
+    if(body){ body.style.maxHeight='0'; body.classList.add('shut'); body.classList.remove('open'); }
+    if(chev) chev.classList.remove('up');
+    if(badge){ badge.style.display='none'; badge.textContent=''; }
+  });
+  searchBase=null;
+}
+
+// ── GOALS MODAL ──────────────────────────────────────────
+function openGoals(){
+  const g=state.goals;
+  const gorder=['macro','fats','vitamins','minerals'];
+  const glabels={macro:'Macronutrients',fats:'Fats & Fatty Acids',vitamins:'Vitamins',minerals:'Minerals'};
+  let html='<div class="form-grid">';
+  gorder.forEach(grp=>{
+    html+=`<div class="msub">${glabels[grp]}</div>`;
+    NUTRIENTS.filter(n=>n.group===grp).forEach(n=>{
+      html+=`<div class="fg"><label>${n.label} (${n.unit})</label><input id="g-${n.key}" type="number" min="0" step="${n.dec>0?Math.pow(10,-n.dec):1}" value="${g[n.key]||0}" /></div>`;
+    });
+    if(grp==='macro') html+=`<div class="fg"><label>Daily Budget ($)</label><input id="g-budget" type="number" min="0" step="0.01" value="${g.budget||25}" /></div>`;
+  });
+  html+='</div>';
+  document.getElementById('goalsForm').innerHTML=html;
+  document.getElementById('goalsModal').classList.add('open');
+}
+
+function saveGoals(){
+  NUTRIENTS.forEach(n=>{ const el=document.getElementById('g-'+n.key); if(el) state.goals[n.key]=parseFloat(el.value)||0; });
+  const b=document.getElementById('g-budget'); if(b) state.goals.budget=parseFloat(b.value)||25;
+  save(); closeModal('goalsModal'); toast('Goals saved'); render();
+}
+
+// ── SAVE FOOD ────────────────────────────────────────────
+function saveFood(){
+  const name=document.getElementById('f-name').value.trim();
+  if(!name){ toast('Please enter a food name'); return; }
+  const food={name, meal:document.getElementById('f-meal').value};
+  NUTRIENTS.forEach(n=>{ const el=document.getElementById('f-'+n.key); food[n.key]=el?(parseFloat(el.value)||0):0; });
+  getDay(currentDate).foods.push(food);
+  save(); closeModal('foodModal'); resetFood();
+  toast('Food entry added'); render();
+}
+
+// ── COST ─────────────────────────────────────────────────
+function openAddCost(){ document.getElementById('costModal').classList.add('open'); }
+function saveCost(){
+  const desc=document.getElementById('c-desc').value.trim();
+  const amount=+document.getElementById('c-amount').value||0;
+  const days=Math.max(1,+document.getElementById('c-days').value||1);
+  if(!desc){ toast('Please enter a description'); return; }
+  if(amount<=0){ toast('Please enter an amount'); return; }
+  for(let i=0;i<days;i++){
+    const d=new Date(currentDate.getTime()+i*86400000);
+    getDay(d).costs.push({desc:desc+(days>1?` (day ${i+1}/${days})`:''), amount, days, daily:amount/days});
+  }
+  save(); closeModal('costModal');
+  document.getElementById('costModal').querySelectorAll('input').forEach(i=>i.value='');
+  document.getElementById('c-days').value='1'; updateSpread();
+  toast(days>1?`Cost spread over ${days} days`:'Cost added'); render();
+}
+function updateSpread(){
+  const a=+document.getElementById('c-amount').value||0;
+  const d=Math.max(1,+document.getElementById('c-days').value||1);
+  document.getElementById('spreadInfo').textContent=a>0?`$${(a/d).toFixed(2)}/day × ${d} day${d>1?'s':''} = $${a.toFixed(2)} total`:'Enter an amount to see the daily cost.';
+}
+
+// ── MISC ─────────────────────────────────────────────────
+function deleteFood(i){ getDay(currentDate).foods.splice(i,1); save(); render(); }
+function deleteCost(i){ getDay(currentDate).costs.splice(i,1); save(); render(); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+function jumpToDay(key){ const [y,m,d]=key.split('-').map(Number); currentDate=new Date(y,m-1,d); switchTab('day',document.querySelector('.tab')); }
+function switchTab(name,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  if(el) el.classList.add('active');
+  ['day','week','budget'].forEach(n=>document.getElementById('tab-'+n).style.display=n===name?'':'none');
+  if(name==='day') renderDay(); else if(name==='week') renderWeek(); else renderBudget();
+}
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2400); }
+document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('open'); }));
+
+load(); render();
+</script>
+</body>
+</html>
